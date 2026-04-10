@@ -179,8 +179,8 @@ def backfill(token, date_str):
 
         for (uid, cid), vehicles in config_to_vehicles.items():
             print(f"📡 Backfilling CID: {cid} on {date_str}...")
-            start_dt = f"{date_str} 00:00:00"
-            end_dt = f"{date_str} 23:59:59"
+            start_dt = f"{date_str}T00:00:00"
+            end_dt = f"{date_str}T23:59:59"
             
             tracked_ids = [str(v['gps_tracked_item_id']) for v in vehicles if v.get('gps_tracked_item_id')]
             if not tracked_ids: continue
