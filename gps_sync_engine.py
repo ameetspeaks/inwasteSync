@@ -63,7 +63,7 @@ def get_gps_token():
 
 def fetch_districts_and_vehicles():
     """Fetches all districts and their associated GPS vehicles."""
-    vehicles = supabase.table("vehicles").select("id, gps_tracked_item_id, registration_number, village_id").eq("has_gps", True).execute()
+    vehicles = supabase.table("vehicles").select("id, gps_tracked_item_id, registration_number, village_id, last_gps_sync, ignition_off_count").eq("has_gps", True).execute()
     districs = supabase.table("districts").select("*").execute()
     blocks = supabase.table("blocks").select("*").execute()
     villages = supabase.table("villages").select("*").execute()
@@ -109,10 +109,37 @@ def sync_realtime(token):
 
         total_processed = 0
         for (uid, cid), vehicles in config_to_vehicles.items():
-            tracked_ids = [str(v['gps_tracked_item_id']) for v in vehicles if v.get('gps_tracked_item_id')]
+            # Filter vehicles to sync based on idle logic:
+            # - If ignition_off_count >= 3, only sync if it's been 15+ minutes
+            # - Otherwise sync every 5 minutes (standard GHA interval)
+            to_sync = []
+            now_utc = datetime.now()
+            
+            for v in vehicles:
+                off_count = v.get('ignition_off_count', 0)
+                last_sync_str = v.get('last_gps_sync')
+                
+                if off_count >= 3 and last_sync_str:
+                    last_sync = datetime.fromisoformat(last_sync_str.replace('Z', '+00:00'))
+                    # Localize now to be comparable
+                    if now_utc.tzinfo is None:
+                        now_comp = now_utc.replace(tzinfo=last_sync.tzinfo)
+                    else:
+                        now_comp = now_utc
+
+                    if now_comp < last_sync + timedelta(minutes=14):
+                        # Skip this vehicle for this run
+                        continue
+                
+                to_sync.append(v)
+
+            if not to_sync:
+                continue
+
+            tracked_ids = [str(v['gps_tracked_item_id']) for v in to_sync if v.get('gps_tracked_item_id')]
             if not tracked_ids: continue
             
-            print(f"📡 Syncing CID: {cid} ({len(tracked_ids)} vehicles)...")
+            print(f"📡 Syncing CID: {cid} ({len(tracked_ids)}/{len(vehicles)} vehicles)...")
             
             # Chunking to avoid long URLs (10 items per request)
             chunk_size = 10
@@ -137,28 +164,39 @@ def sync_realtime(token):
                         points = data["data"]
                         print(f"✅ Received {len(points)} points for chunk.")
                         
-                        v_lookup = {str(v['gps_tracked_item_id']): v for v in vehicles}
+                        v_lookup = {str(v['gps_tracked_item_id']): v for v in to_sync}
                         
-                        # Sort points by timestamp to update vehicle status in order
-                        points.sort(key=lambda x: x.get('deviceTimestamp', ''))
+                        # Group points by vehicle to find the LATEST state
+                        vehicle_latest_point = {}
+                        for p in points:
+                            tid = str(p.get('trackedItemID'))
+                            if tid not in vehicle_latest_point or p.get('deviceTimestamp', '') > vehicle_latest_point[tid].get('deviceTimestamp', ''):
+                                vehicle_latest_point[tid] = p
+
+                        # 1. Update Vehicle Status based on LATEST point
+                        for tid, p in vehicle_latest_point.items():
+                            v = v_lookup.get(tid)
+                            if v:
+                                ignited = int(p.get('ignition', 0)) == 1
+                                # If ignition is ON, reset count. If OFF, increment count.
+                                new_off_count = 0 if ignited else (v.get('ignition_off_count', 0) + 1)
+                                
+                                supabase.table("vehicles").update({
+                                    "last_gps_lat": float(p.get('lat', 0)),
+                                    "last_gps_long": float(p.get('long', 0)),
+                                    "last_gps_speed": float(p.get('speed', 0)),
+                                    "is_ignited": ignited,
+                                    "is_moving": int(p.get('movement', 0)) == 1,
+                                    "last_gps_sync": datetime.now().isoformat(),
+                                    "ignition_off_count": new_off_count
+                                }).eq("id", v['id']).execute()
                         
+                        # 2. Insert Logs (dupes handled by DB constraint)
                         for p in points:
                             tid = str(p.get('trackedItemID'))
                             v = v_lookup.get(tid)
                             if v:
                                 try:
-                                    # 1. Update Vehicle Status (latest point for this vehicle)
-                                    # Since points are sorted, the last one for a vehicle will be the most recent
-                                    supabase.table("vehicles").update({
-                                        "last_gps_lat": float(p.get('lat', 0)),
-                                        "last_gps_long": float(p.get('long', 0)),
-                                        "last_gps_speed": float(p.get('speed', 0)),
-                                        "is_ignited": int(p.get('ignition', 0)) == 1,
-                                        "is_moving": int(p.get('movement', 0)) == 1,
-                                        "last_gps_sync": datetime.now().isoformat(),
-                                    }).eq("id", v['id']).execute()
-                                    
-                                    # 2. Insert Log (dupes handled by DB constraint)
                                     supabase.table("gps_live_logs").insert({
                                         "vehicle_id": v['id'],
                                         "user_id": uid,
@@ -173,9 +211,9 @@ def sync_realtime(token):
                                     }).execute()
                                     total_processed += 1
                                 except Exception:
-                                    pass # Likely duplicate
+                                    pass 
                     else:
-                        print(f"⚠️ No data for this chunk: {data.get('message', 'empty')}")
+                        print(f"⚠️ No data for this chunk.")
                 else:
                     print(f"❌ API Error {resp.status_code} for CID {cid}")
                     
