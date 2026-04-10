@@ -164,6 +164,10 @@ def sync_realtime(token):
                         points = data["data"]
                         print(f"✅ Received {len(points)} points for chunk.")
                         
+                        # DEBUG: Print sample of the first point received
+                        if points:
+                            print(f"📄 Sample Point (latest): {json.dumps(points[0], indent=2)}")
+                        
                         v_lookup = {str(v['gps_tracked_item_id']): v for v in to_sync}
                         
                         # Group points by vehicle to find the LATEST state
@@ -266,6 +270,10 @@ def backfill(token, date_str):
                     if data.get("isSuccess") and data.get("data"):
                         points = data["data"]
                         print(f"✅ Received {len(points)} historical points for chunk.")
+                        
+                        # DEBUG: Print sample of the first point received
+                        if points: 
+                            print(f"📄 Sample History Point: {json.dumps(points[0], indent=2)}")
                         
                         v_lookup = {str(v['gps_tracked_item_id']): v for v in vehicles}
                         
