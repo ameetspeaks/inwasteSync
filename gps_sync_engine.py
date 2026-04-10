@@ -190,10 +190,24 @@ def backfill(token, date_str):
             for i in range(0, len(tracked_ids), chunk_size):
                 chunk = tracked_ids[i:i+chunk_size]
                 ids_str = ",".join(chunk)
-                url = f"{GPS_API_BASE}/Report/GetTrackedPointReport?UserID={uid}&ClientID={cid}&TrackedItemIDs={ids_str}&StartDatetime={start_dt}&EndDatetime={end_dt}"
+                
+                params = {
+                    "UserID": uid,
+                    "ClientID": cid,
+                    "TrackedItemIDs": ids_str,
+                    "StartDatetime": start_dt,
+                    "EndDatetime": end_dt
+                }
+                
                 headers = {"Authorization": f"Bearer {token}"}
                 
-                resp = requests.get(url, headers=headers, timeout=60)
+                # Debug URL
+                if i == 0:
+                    print(f"🔗 Requesting: {GPS_API_BASE}/Report/GetTrackedPointReport")
+                    print(f"📦 Params: {params}")
+
+                resp = requests.get(f"{GPS_API_BASE}/Report/GetTrackedPointReport", headers=headers, params=params, timeout=60)
+                
                 if resp.status_code == 200:
                     data = resp.json()
                     if data.get("isSuccess") and data.get("data"):
@@ -207,6 +221,8 @@ def backfill(token, date_str):
                             v = v_lookup.get(tid)
                             if v:
                                 try:
+                                    # Convert deviceTimestamp to ISO if needed, or rely on DB parsing
+                                    # Usually '2026-04-10 12:34:56' is fine for Postgres timestamp
                                     supabase.table("gps_live_logs").insert({
                                         "vehicle_id": v['id'],
                                         "user_id": uid,
@@ -221,8 +237,11 @@ def backfill(token, date_str):
                                     }).execute()
                                 except Exception:
                                     pass
+                    else:
+                        print(f"⚠️ API Info: {data.get('message', 'No data returned')}")
                 else:
                     print(f"❌ Backfill API Error {resp.status_code} for CID {cid}")
+                    if resp.text: print(f"📄 Response: {resp.text[:200]}")
                     
     except Exception as e:
         print(f"❌ Error in backfill: {e}")
