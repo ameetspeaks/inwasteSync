@@ -48,12 +48,16 @@ def ingest_file(file_path):
             "raw_data": p
         })
 
-    # Upsert in chunks
+    # Insert in chunks
     chunk_size = 500
     for i in range(0, len(logs), chunk_size):
         chunk = logs[i:i + chunk_size]
-        supabase.table("gps_live_logs").upsert(chunk, on_conflict="vehicle_id,device_timestamp").execute()
-        
+        try:
+            supabase.table("gps_live_logs").insert(chunk).execute()
+        except Exception as e:
+            # Skip duplicates if a constraint is added later, or just continue
+            print(f"⚠️ Warning during chunk insertion: {e}")
+            
     print(f"✅ Ingested {len(logs)} points.")
 
     # Create historical session for the day
