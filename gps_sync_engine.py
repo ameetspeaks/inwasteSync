@@ -8,11 +8,13 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from gps_auth import get_gps_token
 from gps_realtime import sync_realtime
-from gps_backfill import backfill
+from gps_backfill import backfill, backfill_range
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="GPS Sync Engine")
-    parser.add_argument("--backfill", type=str, help="Date to backfill (YYYY-MM-DD)")
+    parser.add_argument("--backfill", type=str, help="Single date to backfill (YYYY-MM-DD)")
+    parser.add_argument("--start_date", type=str, help="Start date for range backfill (YYYY-MM-DD)")
+    parser.add_argument("--end_date", type=str, help="End date for range backfill (YYYY-MM-DD)")
     parser.add_argument("--loop", action="store_true", help="Run in a continuous loop")
     parser.add_argument("--interval", type=int, default=300, help="Loop interval in seconds")
     
@@ -24,7 +26,12 @@ if __name__ == "__main__":
         print("❌ Could not obtain token. Exiting.")
         exit(1)
         
-    if args.backfill:
+    if args.start_date and args.end_date:
+        backfill_range(token, args.start_date, args.end_date)
+    elif args.start_date:
+        # If only start date is provided, backfill only that day
+        backfill(token, args.start_date)
+    elif args.backfill:
         backfill(token, args.backfill)
     elif args.loop:
         while True:

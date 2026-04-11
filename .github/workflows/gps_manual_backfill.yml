@@ -3,9 +3,13 @@ name: 🕰️ GPS Manual Backfill
 on:
   workflow_dispatch:
     inputs:
-      backfill_date:
-        description: 'Date to backfill (YYYY-MM-DD)'
+      start_date:
+        description: 'Start Date (YYYY-MM-DD)'
         required: true
+        default: ''
+      end_date:
+        description: 'End Date (Optional, defaults to start_date) (YYYY-MM-DD)'
+        required: false
         default: ''
 
 jobs:
@@ -29,4 +33,9 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.VITE_SUPABASE_SERVICE_ROLE_KEY }}
-        run: python gps_sync_engine.py --backfill ${{ github.event.inputs.backfill_date }}
+        run: |
+          if [ -z "${{ github.event.inputs.end_date }}" ]; then
+            python gps_sync_engine.py --start_date ${{ github.event.inputs.start_date }} --end_date ${{ github.event.inputs.start_date }}
+          else
+            python gps_sync_engine.py --start_date ${{ github.event.inputs.start_date }} --end_date ${{ github.event.inputs.end_date }}
+          fi
