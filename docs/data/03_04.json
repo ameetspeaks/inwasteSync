@@ -1,0 +1,28 @@
+{
+  "isSuccess": true,
+  "message": "",
+  "data": [
+    {
+      "itemName": "inWaste",
+      "trackedItemID": 7733,
+      "deviceTimestamp": "2026-04-03T16:54:22",
+      "lat": 26.76059722,
+      "long": 81.84530667,
+      "speed": 0,
+      "distance": 0,
+      "angle": 143,
+      "altitude": 0,
+      "priority": 0,
+      "ignition": 0,
+      "acStatus": 0,
+      "movement": 0,
+      "gsmSignalLevel": 4,
+      "batteryVoltage": 0,
+      "internalBatteryVoltage": 0,
+      "din2": null,
+      "din3": null,
+      "greenDrivingType": "N/A",
+      "extendedProperties2": null
+    }
+  ]
+}

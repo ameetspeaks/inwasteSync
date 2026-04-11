@@ -1,0 +1,50 @@
+{
+  "isSuccess": true,
+  "message": "",
+  "data": [
+    {
+      "itemName": "inWaste",
+      "trackedItemID": 7733,
+      "deviceTimestamp": "2026-03-30T15:58:40",
+      "lat": 26.76067611,
+      "long": 81.84534333,
+      "speed": 0,
+      "distance": 0,
+      "angle": 174,
+      "altitude": 0,
+      "priority": 0,
+      "ignition": 0,
+      "acStatus": 0,
+      "movement": 0,
+      "gsmSignalLevel": 4,
+      "batteryVoltage": 0,
+      "internalBatteryVoltage": 0,
+      "din2": null,
+      "din3": null,
+      "greenDrivingType": "N/A",
+      "extendedProperties2": null
+    },
+    {
+      "itemName": "inWaste",
+      "trackedItemID": 7733,
+      "deviceTimestamp": "2026-03-30T15:59:33",
+      "lat": 26.76067611,
+      "long": 81.84534333,
+      "speed": 0,
+      "distance": 0,
+      "angle": 174,
+      "altitude": 0,
+      "priority": 0,
+      "ignition": 0,
+      "acStatus": 1,
+      "movement": 0,
+      "gsmSignalLevel": 4,
+      "batteryVoltage": 0,
+      "internalBatteryVoltage": 6,
+      "din2": null,
+      "din3": null,
+      "greenDrivingType": "N/A",
+      "extendedProperties2": null
+    }
+  ]
+}
