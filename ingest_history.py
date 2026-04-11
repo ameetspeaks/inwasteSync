@@ -17,6 +17,7 @@ supabase: Client = create_client(url, key)
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs", "data")
 VEHICLE_ID = "9166929d-3617-4e8e-80af-aaea16bbdc54" # UP32-MUS-0105
+DRIVER_ID = "24e68e33-a537-4cce-a394-ad29a85a1ddd"  # Tushar (driver.mustafabad@inwaste.in)
 
 def ingest_file(file_path):
     print(f"\n📂 Processing {os.path.basename(file_path)}...")
@@ -33,38 +34,17 @@ def ingest_file(file_path):
     start_time = f"{date_str}T00:00:00+05:30"
     end_time = f"{date_str}T23:59:59+05:30"
 
-    # 1. FIND ACTUAL ROUTE & ASSIGNED DRIVER
-    # Get vehicle details including assigned driver
-    v_res = supabase.table("vehicles").select("id, assigned_driver_id").eq("id", VEHICLE_ID).single().execute()
-    if not v_res.data:
-        print(f"❌ Vehicle {VEHICLE_ID} not found.")
-        return
-    
-    driver_id = v_res.data.get("assigned_driver_id")
-    
-    # Find route assigned to this vehicle
-    r_res = supabase.table("routes").select("id").eq("vehicle_id", VEHICLE_ID).limit(1).execute()
-    if not r_res.data:
-        print(f"❌ No route found for vehicle {VEHICLE_ID}. Cannot create session.")
-        return
-    route_id = r_res.data[0]["id"]
+    # 1. FIND ROUTE ID
+    route_id = None
+    try:
+        r_res = supabase.table("routes").select("id").eq("vehicle_id", VEHICLE_ID).limit(1).execute()
+        if r_res.data:
+            route_id = r_res.data[0]["id"]
+    except Exception:
+        pass
 
-    # If no driver assigned, try to find a previous driver session for this vehicle
-    if not driver_id:
-        print(f"⚠️ No driver assigned to vehicle. Looking for last active driver...")
-        prev_s = supabase.table("tracking_sessions").select("driver_id").eq("vehicle_id", VEHICLE_ID).limit(1).execute()
-        if prev_s.data:
-            driver_id = prev_s.data[0]["driver_id"]
-            print(f"✅ Found previous driver: {driver_id}")
-        else:
-            # Absolute fallback to first driver in system if still null (to prevent crash)
-            d_fallback = supabase.table("profiles").select("id").eq("role", "driver").limit(1).execute()
-            if d_fallback.data:
-                driver_id = d_fallback.data[0]["id"]
-                print(f"ℹ️ Using system fallback driver: {driver_id}")
-
-    if not driver_id:
-        print("❌ No driver could be determined. Violates database constraint.")
+    if not route_id:
+        print(f"❌ No route found for vehicle {VEHICLE_ID}.")
         return
 
     # 2. CLEAN UP OLD DATA
@@ -109,14 +89,14 @@ def ingest_file(file_path):
     supabase.table("tracking_sessions").insert({
         "vehicle_id": VEHICLE_ID,
         "route_id": route_id,
-        "driver_id": driver_id,
+        "driver_id": DRIVER_ID,
         "status": "completed",
         "start_time": start_time,
         "end_time": end_time,
         "total_distance_km": 0,
         "points_visited": 0
     }).execute()
-    print(f"✨ Created historical session for {date_str} with assigned driver.")
+    print(f"✨ Created historical session for {date_str} (Driver: Tushar).")
 
 if __name__ == "__main__":
     if not os.path.exists(DATA_DIR):
@@ -127,4 +107,4 @@ if __name__ == "__main__":
     files.sort()
     for f in files:
         ingest_file(f)
-    print("\n🏁 Historical data rewrite complete.")
+    print("\n🏁 Historical data mapping complete.")
