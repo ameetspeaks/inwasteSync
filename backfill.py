@@ -1,7 +1,7 @@
 import requests
 import json
-from .config import GPS_API_BASE, supabase
-from .engine import fetch_districts_and_vehicles
+from config import GPS_API_BASE, supabase
+from engine import fetch_districts_and_vehicles
 
 def backfill(token, date_str):
     print(f"🕰️ Starting Backfill for date: {date_str}")
