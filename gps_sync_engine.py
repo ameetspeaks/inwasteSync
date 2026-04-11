@@ -23,6 +23,28 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+def parse_iso(dt_str):
+    """Robust ISO 8601 parser that handles varying fractional second precision."""
+    if not dt_str: return None
+    dt_str = dt_str.replace('Z', '+00:00')
+    # If there's a fractional part, Python 3.7-3.10 fromisoformat is picky (expects 3 or 6 digits)
+    if '.' in dt_str:
+        prefix, rest = dt_str.split('.', 1)
+        # Find where the timezone/offset starts
+        import re
+        tz_match = re.search(r'[Z+-]', rest)
+        if tz_match:
+            frac = rest[:tz_match.start()]
+            suffix = rest[tz_match.start():]
+            # Pad or truncate fractional part to 6 digits
+            frac = frac.ljust(6, '0')[:6]
+            dt_str = f"{prefix}.{frac}{suffix}"
+        else:
+            # No timezone
+            frac = rest.ljust(6, '0')[:6]
+            dt_str = f"{prefix}.{frac}"
+    return datetime.fromisoformat(dt_str)
+
 def get_gps_token():
     """Fetches GPS token from DB or refreshes from API."""
     try:
@@ -30,8 +52,8 @@ def get_gps_token():
         res = supabase.table("gps_integration_settings").select("*").eq("id", 1).execute()
         if res.data:
             data = res.data[0]
-            expires_at = datetime.fromisoformat(data['expires_at'].replace('Z', '+00:00'))
-            if expires_at > datetime.now(expires_at.tzinfo) + timedelta(seconds=30):
+            expires_at = parse_iso(data['expires_at'])
+            if expires_at and expires_at > datetime.now(expires_at.tzinfo) + timedelta(seconds=30):
                 return data['token']
 
         # 2. Refresh from API
@@ -120,7 +142,7 @@ def sync_realtime(token):
                 last_sync_str = v.get('last_gps_sync')
                 
                 if off_count >= 3 and last_sync_str:
-                    last_sync = datetime.fromisoformat(last_sync_str.replace('Z', '+00:00'))
+                    last_sync = parse_iso(last_sync_str)
                     # Localize now to be comparable
                     if now_utc.tzinfo is None:
                         now_comp = now_utc.replace(tzinfo=last_sync.tzinfo)
