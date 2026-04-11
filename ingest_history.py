@@ -85,7 +85,7 @@ def ingest_file(file_path):
     print(f"✅ Ingested {len(logs)} points.")
 
     # 5. CREATE SESSION
-    supabase.table("tracking_sessions").insert({
+    s_res = supabase.table("tracking_sessions").insert({
         "vehicle_id": VEHICLE_ID,
         "route_id": route_id,
         "driver_id": DRIVER_ID,
@@ -95,6 +95,23 @@ def ingest_file(file_path):
         "total_distance_km": 0,
         "points_visited": 0
     }).execute()
+    
+    if s_res.data:
+        s_id = s_res.data[0]['id']
+        # Mirror to tracking_logs for playback
+        t_logs = []
+        for p in points:
+            t_logs.append({
+                "session_id": s_id,
+                "timestamp": ensure_ist(p["deviceTimestamp"]),
+                "latitude": p["lat"],
+                "longitude": p["long"],
+                "speed": p["speed"],
+                "accuracy": 10
+            })
+        for i in range(0, len(t_logs), chunk_size):
+            supabase.table("tracking_logs").insert(t_logs[i:i + chunk_size]).execute()
+
     print(f"✨ Created historical session for {date_str} (Driver: Tushar).")
 
 if __name__ == "__main__":

@@ -40,7 +40,10 @@ def process_gps_points(points, v_lookup, uid, v_to_session):
     vehicle_latest_point = {}
     for p in points:
         tid = str(p.get('trackedItemID'))
-        ts = ensure_ist(p.get('deviceTimestamp', ''))
+        # Handle various casing from internal/external payloads
+        raw_ts = p.get('deviceTimestamp') or p.get('devicetimestamp') or p.get('DeviceTimestamp', '')
+        ts = ensure_ist(raw_ts)
+        # Update the dict so subsequent .get('deviceTimestamp') works too
         p['deviceTimestamp'] = ts
             
         if tid not in vehicle_latest_point or ts > vehicle_latest_point[tid].get('deviceTimestamp', ''):
@@ -52,6 +55,7 @@ def process_gps_points(points, v_lookup, uid, v_to_session):
         if v:
             ignited = int(p.get('ignition', 0)) == 1
             new_off_count = 0 if ignited else (v.get('ignition_off_count', 0) + 1)
+            ts = p.get('deviceTimestamp')
             
             supabase.table("vehicles").update({
                 "last_gps_lat": float(p.get('lat', 0)),
@@ -59,7 +63,7 @@ def process_gps_points(points, v_lookup, uid, v_to_session):
                 "last_gps_speed": float(p.get('speed', 0)),
                 "is_ignited": ignited,
                 "is_moving": int(p.get('movement', 0)) == 1,
-                "last_gps_sync": datetime.now().isoformat(),
+                "last_gps_sync": ts, # Use the device time, not server time
                 "ignition_off_count": new_off_count
             }).eq("id", v['id']).execute()
 
@@ -69,12 +73,13 @@ def process_gps_points(points, v_lookup, uid, v_to_session):
         v = v_lookup.get(tid)
         if v:
             sid = v_to_session.get(v['id'])
+            ts = p.get('deviceTimestamp')
             try:
                 supabase.table("gps_live_logs").insert({
                     "vehicle_id": v['id'],
                     "user_id": uid,
                     "tracked_item_id": tid,
-                    "device_timestamp": p.get('deviceTimestamp'),
+                    "device_timestamp": ts,
                     "latitude": p.get('lat'),
                     "longitude": p.get('long'),
                     "speed": p.get('speed'),
@@ -88,13 +93,14 @@ def process_gps_points(points, v_lookup, uid, v_to_session):
                 if sid:
                     supabase.table("tracking_logs").insert({
                         "session_id": sid,
-                        "timestamp": p.get('deviceTimestamp'),
+                        "timestamp": ts,
                         "latitude": p.get('lat'),
                         "longitude": p.get('long'),
                         "speed": p.get('speed'),
                         "accuracy": 10
                     }).execute()
                 total_inserted += 1
-            except Exception:
+            except Exception as e:
+                print(f"Error inserting logs for {tid}: {e}")
                 pass 
     return total_inserted
