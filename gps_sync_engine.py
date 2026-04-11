@@ -195,11 +195,11 @@ def sync_realtime(token):
                                     "ignition_off_count": new_off_count
                                 }).eq("id", v['id']).execute()
                         
-                        # 2. Find active sessions for these vehicles
+                        # 2. Find active sessions for these vehicles (tracking_sessions is denormalized with vehicle_id)
                         v_to_session = {}
-                        active_sessions = supabase.table("tracking_sessions").select("id, routes!inner(vehicle_id)").eq("status", "in_progress").execute()
+                        active_sessions = supabase.table("tracking_sessions").select("id, vehicle_id").eq("status", "in_progress").execute()
                         for s in active_sessions.data:
-                            v_to_session[s['routes']['vehicle_id']] = s['id']
+                            v_to_session[s['vehicle_id']] = s['id']
 
                         # 3. Insert Logs (dupes handled by DB constraint)
                         for p in points:
