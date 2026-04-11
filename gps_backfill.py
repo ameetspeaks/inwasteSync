@@ -47,7 +47,7 @@ def backfill(token, date_str):
                                         "vehicle_id": v['id'],
                                         "user_id": uid,
                                         "tracked_item_id": tid,
-                                        "device_timestamp": p.get('deviceTimestamp'),
+                                        "device_timestamp": p.get('deviceTimestamp') + "+05:30" if p.get('deviceTimestamp') and '+' not in p.get('deviceTimestamp') else p.get('deviceTimestamp'),
                                         "latitude": p.get('lat'),
                                         "longitude": p.get('long'),
                                         "speed": p.get('speed'),

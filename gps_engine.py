@@ -39,7 +39,13 @@ def process_gps_points(points, v_lookup, uid, v_to_session):
     vehicle_latest_point = {}
     for p in points:
         tid = str(p.get('trackedItemID'))
-        if tid not in vehicle_latest_point or p.get('deviceTimestamp', '') > vehicle_latest_point[tid].get('deviceTimestamp', ''):
+        ts = p.get('deviceTimestamp', '')
+        # Ensure timestamp has IST offset if missing
+        if ts and '+' not in ts and 'Z' not in ts.upper():
+            ts = f"{ts}+05:30"
+            p['deviceTimestamp'] = ts
+            
+        if tid not in vehicle_latest_point or ts > vehicle_latest_point[tid].get('deviceTimestamp', ''):
             vehicle_latest_point[tid] = p
 
     # 1. Update Vehicle Status based on LATEST point
