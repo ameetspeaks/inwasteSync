@@ -1,5 +1,6 @@
 from datetime import datetime
 from gps_config import supabase
+from gps_utils import ensure_ist
 
 def fetch_districts_and_vehicles():
     """Fetches all districts and their associated GPS vehicles."""
@@ -39,11 +40,8 @@ def process_gps_points(points, v_lookup, uid, v_to_session):
     vehicle_latest_point = {}
     for p in points:
         tid = str(p.get('trackedItemID'))
-        ts = p.get('deviceTimestamp', '')
-        # Ensure timestamp has IST offset if missing
-        if ts and '+' not in ts and 'Z' not in ts.upper():
-            ts = f"{ts}+05:30"
-            p['deviceTimestamp'] = ts
+        ts = ensure_ist(p.get('deviceTimestamp', ''))
+        p['deviceTimestamp'] = ts
             
         if tid not in vehicle_latest_point or ts > vehicle_latest_point[tid].get('deviceTimestamp', ''):
             vehicle_latest_point[tid] = p

@@ -3,6 +3,7 @@ import json
 from datetime import datetime, timedelta
 from gps_config import GPS_API_BASE, supabase
 from gps_engine import fetch_districts_and_vehicles
+from gps_utils import ensure_ist
 
 def backfill_range(token, start_date_str, end_date_str):
     """Backfills data for a range of dates, one day at a time."""
@@ -92,9 +93,7 @@ def backfill(token, date_str):
                     # 3. INSERT LOGS
                     logs_to_insert = []
                     for p in points:
-                        ts = p.get('deviceTimestamp')
-                        if ts and '+' not in ts:
-                            ts = f"{ts}+05:30"
+                        ts = ensure_ist(p.get('deviceTimestamp'))
                         
                         logs_to_insert.append({
                             "vehicle_id": v_id,
@@ -131,8 +130,8 @@ def backfill(token, date_str):
                         actual_start = sorted_points[0].get('deviceTimestamp')
                         actual_end = sorted_points[-1].get('deviceTimestamp')
                         
-                        if actual_start and '+' not in actual_start: actual_start += "+05:30"
-                        if actual_end and '+' not in actual_end: actual_end += "+05:30"
+                        if actual_start: actual_start = ensure_ist(actual_start)
+                        if actual_end: actual_end = ensure_ist(actual_end)
 
                         session_resp = supabase.table("tracking_sessions").insert({
                             "vehicle_id": v_id,
@@ -150,8 +149,7 @@ def backfill(token, date_str):
                             # Mirror logs to tracking_logs for dashboard history
                             tracking_logs = []
                             for p in points:
-                                ts = p.get('deviceTimestamp')
-                                if ts and '+' not in ts: ts = f"{ts}+05:30"
+                                ts = ensure_ist(p.get('deviceTimestamp'))
                                 tracking_logs.append({
                                     "session_id": s_id,
                                     "timestamp": ts,

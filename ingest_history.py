@@ -3,6 +3,7 @@ import json
 import glob
 from supabase import create_client, Client
 from dotenv import load_dotenv
+from gps_utils import ensure_ist
 
 load_dotenv()
 
@@ -61,9 +62,7 @@ def ingest_file(file_path):
     # 3. CONVERT POINTS
     logs = []
     for p in points:
-        ts = p["deviceTimestamp"]
-        if "+" not in ts:
-            ts = f"{ts}+05:30"
+        ts = ensure_ist(p["deviceTimestamp"])
             
         logs.append({
             "vehicle_id": VEHICLE_ID,
