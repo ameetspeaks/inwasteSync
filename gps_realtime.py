@@ -1,9 +1,9 @@
 import requests
 import json
 from datetime import datetime, timedelta
-from config import supabase, GPS_API_BASE
-from utils import parse_iso
-from engine import fetch_districts_and_vehicles, process_gps_points
+from gps_config import supabase, GPS_API_BASE
+from gps_utils import parse_iso
+from gps_engine import fetch_districts_and_vehicles, process_gps_points
 
 def sync_realtime(token):
     now = datetime.now()

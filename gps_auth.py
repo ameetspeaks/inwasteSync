@@ -1,7 +1,7 @@
 import requests
 from datetime import datetime, timedelta
-from config import supabase, GPS_API_BASE, GPS_USER, GPS_PASS
-from utils import parse_iso
+from gps_config import supabase, GPS_API_BASE, GPS_USER, GPS_PASS
+from gps_utils import parse_iso
 
 def get_gps_token():
     """Fetches GPS token from DB or refreshes from API."""

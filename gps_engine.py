@@ -1,5 +1,5 @@
 from datetime import datetime
-from config import supabase
+from gps_config import supabase
 
 def fetch_districts_and_vehicles():
     """Fetches all districts and their associated GPS vehicles."""

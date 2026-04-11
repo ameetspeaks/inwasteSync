@@ -6,9 +6,9 @@ import os
 # Ensure the root directory is in sys.path for robust imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from auth import get_gps_token
-from realtime import sync_realtime
-from backfill import backfill
+from gps_auth import get_gps_token
+from gps_realtime import sync_realtime
+from gps_backfill import backfill
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="GPS Sync Engine")
