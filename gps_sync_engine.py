@@ -195,11 +195,18 @@ def sync_realtime(token):
                                     "ignition_off_count": new_off_count
                                 }).eq("id", v['id']).execute()
                         
-                        # 2. Insert Logs (dupes handled by DB constraint)
+                        # 2. Find active sessions for these vehicles
+                        v_to_session = {}
+                        active_sessions = supabase.table("tracking_sessions").select("id, routes!inner(vehicle_id)").eq("status", "in_progress").execute()
+                        for s in active_sessions.data:
+                            v_to_session[s['routes']['vehicle_id']] = s['id']
+
+                        # 3. Insert Logs (dupes handled by DB constraint)
                         for p in points:
                             tid = str(p.get('trackedItemID'))
                             v = v_lookup.get(tid)
                             if v:
+                                sid = v_to_session.get(v['id'])
                                 try:
                                     supabase.table("gps_live_logs").insert({
                                         "vehicle_id": v['id'],
@@ -211,8 +218,21 @@ def sync_realtime(token):
                                         "speed": p.get('speed'),
                                         "ignition": p.get('ignition'),
                                         "movement": p.get('movement'),
-                                        "raw_data": p
+                                        "raw_data": p,
+                                        "session_id": sid
                                     }).execute()
+                                    
+                                    # Also insert into tracking_logs to support current Session View
+                                    if sid:
+                                        supabase.table("tracking_logs").upsert({
+                                            "session_id": sid,
+                                            "timestamp": p.get('deviceTimestamp'),
+                                            "latitude": p.get('lat'),
+                                            "longitude": p.get('long'),
+                                            "speed": p.get('speed'),
+                                            "accuracy": 10
+                                        }, on_conflict="session_id,timestamp").execute()
+                                        
                                     total_processed += 1
                                 except Exception:
                                     pass 
@@ -281,9 +301,10 @@ def backfill(token, date_str):
                             tid = str(p.get('trackedItemID'))
                             v = v_lookup.get(tid)
                             if v:
+                                # For backfill, we don't necessarily have an active session,
+                                # but we can try to find one by date if needed.
+                                # For now, just keep it simple but include the field for schema compatibility.
                                 try:
-                                    # Convert deviceTimestamp to ISO if needed, or rely on DB parsing
-                                    # Usually '2026-04-10 12:34:56' is fine for Postgres timestamp
                                     supabase.table("gps_live_logs").insert({
                                         "vehicle_id": v['id'],
                                         "user_id": uid,
