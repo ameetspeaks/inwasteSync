@@ -3,7 +3,7 @@ from gps_config import supabase
 
 def fetch_districts_and_vehicles():
     """Fetches all districts and their associated GPS vehicles."""
-    vehicles = supabase.table("vehicles").select("id, gps_tracked_item_id, registration_number, village_id, last_gps_sync, ignition_off_count").eq("has_gps", True).execute()
+    vehicles = supabase.table("vehicles").select("id, gps_tracked_item_id, registration_number, village_id, last_gps_sync, ignition_off_count, driver_id").eq("has_gps", True).execute()
     districs = supabase.table("districts").select("*").execute()
     blocks = supabase.table("blocks").select("*").execute()
     villages = supabase.table("villages").select("*").execute()

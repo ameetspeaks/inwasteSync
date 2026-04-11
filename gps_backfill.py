@@ -120,10 +120,10 @@ def backfill(token, date_str):
                     driver_id = v.get('driver_id')
                     
                     if not route_id:
-                        r_res = supabase.table("routes").select("id, driver_id").eq("vehicle_id", v_id).limit(1).execute()
+                        r_res = supabase.table("routes").select("id, assigned_driver_id").eq("vehicle_id", v_id).limit(1).execute()
                         if r_res.data:
                             route_id = r_res.data[0]["id"]
-                            driver_id = r_res.data[0].get("driver_id")
+                            driver_id = r_res.data[0].get("assigned_driver_id")
 
                     if route_id and driver_id:
                         # Determine actual start/end from logs if possible
