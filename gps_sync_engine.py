@@ -224,14 +224,14 @@ def sync_realtime(token):
                                     
                                     # Also insert into tracking_logs to support current Session View
                                     if sid:
-                                        supabase.table("tracking_logs").upsert({
+                                        supabase.table("tracking_logs").insert({
                                             "session_id": sid,
                                             "timestamp": p.get('deviceTimestamp'),
                                             "latitude": p.get('lat'),
                                             "longitude": p.get('long'),
                                             "speed": p.get('speed'),
                                             "accuracy": 10
-                                        }, on_conflict="session_id,timestamp").execute()
+                                        }).execute()
                                         
                                     total_processed += 1
                                 except Exception:
