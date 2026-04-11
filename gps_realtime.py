@@ -29,6 +29,7 @@ def sync_realtime(token):
                 
                 if off_count >= 3 and last_sync_str:
                     last_sync = parse_iso(last_sync_str)
+                    # For vehicles idle for 3+ cycles, only sync if 14+ mins have passed (15 min interval)
                     if now_utc.tzinfo is None:
                         now_comp = now_utc.replace(tzinfo=last_sync.tzinfo)
                     else:
